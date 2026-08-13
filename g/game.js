@@ -144,12 +144,7 @@ class CustomHUD {
       ctx.fillStyle = i < 3 ? '#ff2222' : (i < 8 ? '#ffff00' : '#00ff00');
       ctx.fillRect(fuelX + 1, blockY, 10, blockH);
     }
-
-    ctx.font = 'bold 36px monospace';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'right';
-    ctx.fillText('12TH', width - 65, height - 25);
-
+    
     const currentGear = this.getCurrentGear(speed, maxSpeed);
 
     ctx.font = 'bold 26px monospace';
