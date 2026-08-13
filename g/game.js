@@ -1,10 +1,47 @@
+// --- Classe de Áudio Simples usando Web Audio API ---
+class EngineAudio {
+  constructor() {
+    this.ctx = null;
+    this.osc = null;
+    this.initialized = false;
+  }
+
+  init() {
+    if (this.initialized) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    this.ctx = new AudioCtx();
+    this.osc = this.ctx.createOscillator();
+    this.gain = this.ctx.createGain();
+
+    this.osc.type = 'sawtooth';
+    this.osc.frequency.setValueAtTime(60, this.ctx.currentTime);
+    this.gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+
+    this.osc.connect(this.gain);
+    this.gain.connect(this.ctx.destination);
+    this.osc.start();
+
+    this.initialized = true;
+  }
+
+  update(speed, maxSpeed, gear) {
+    if (!this.initialized || !this.osc) return;
+    const ratio = speed / maxSpeed;
+    // Ajusta a frequência baseada na marcha e velocidade
+    const pitch = 60 + (ratio * 200) + (gear * 20);
+    this.osc.frequency.setTargetAtTime(pitch, this.ctx.currentTime, 0.05);
+  }
+}
+
+// --- Imagens e Canvas ---
 const carSprite = new Image();
 carSprite.src = "skyli.png";
 
 const menuBG = new Image();
 menuBG.src = "MENU.png";
 
-// Instância do sistema de som
 const engineSound = new EngineAudio();
 
 const canvas = document.getElementById('gameCanvas');
@@ -34,6 +71,7 @@ if (fullscreenBtn) {
   fullscreenBtn.addEventListener('click', toggleFullscreen);
 }
 
+// --- HUD ---
 class CustomHUD {
   constructor(canvas, ctx) {
     this.canvas = canvas;
@@ -163,8 +201,9 @@ class CustomHUD {
   }
 }
 
-let hud = null;
+const hud = new CustomHUD(canvas, ctx);
 
+// --- Pista e Pseudo-3D ---
 const ROAD_WIDTH = 500;
 const SEGMENT_LENGTH = 200;
 const CAM_DEPTH = 0.8;
@@ -249,7 +288,6 @@ let gameState = 'menu';
 const keys = {};
 const gamepadKeys = {};
 
-// Libera áudio também no clique na tela
 window.addEventListener('click', () => {
   if (engineSound) engineSound.init();
 });
@@ -257,7 +295,6 @@ window.addEventListener('click', () => {
 window.addEventListener('keydown', (e) => {
   keys[e.key] = true;
 
-  // Libera o áudio do navegador na primeira tecla
   if (engineSound) engineSound.init();
 
   if (gameState === 'menu' && (e.key === 'Enter' || e.key === ' ')) {
@@ -332,8 +369,7 @@ function update(dt) {
   const currentCurve = segments[0].curve;
   bgOffset -= currentCurve * (speed / maxSpeed) * 0.2;
 
-  // Atualização contínua do som do motor e trocas de marcha
-  const currentGear = hud ? hud.getCurrentGear(speed, maxSpeed) : 1;
+  const currentGear = hud.getCurrentGear(speed, maxSpeed);
   engineSound.update(speed, maxSpeed, currentGear);
 }
 
@@ -385,7 +421,7 @@ function drawMenu() {
     ctx.textAlign = 'center';
     ctx.font = 'bold 50px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('CARREGANDO...', canvas.width / 2, canvas.height / 2);
+    ctx.fillText('PRESSIONE ENTER PARA JOGAR', canvas.width / 2, canvas.height / 2);
   }
 }
 
@@ -513,11 +549,7 @@ function draw(dt) {
   }
 
   drawPlayer(bottomRoadWidth);
-
-  if (!hud) {
-    hud = new CustomHUD(canvas, ctx);
-  }
-  hud.render(speed, maxSpeed, dt, segments, playerX);
+  hud.render(speed, maxSpeed, dt);
 }
 
 let lastTime = 0;
