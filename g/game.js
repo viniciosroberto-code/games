@@ -106,19 +106,17 @@ function draw() {
     }
   }
 
-  // Desenha o Carro do Jogador na base da tela
-  const carX = canvas.width / 2 + playerX * (canvas.width / 3) - 40;
-  const carY = canvas.height - 80;
+  const carWidth = 140;
+const carHeight = 80;
 
-  ctx.fillStyle = '#dd2222'; // Cor do carro (vermelho)
-  ctx.fillRect(carX, carY, 80, 40);
-  ctx.fillStyle = '#111111'; // Pneus/Janela
-  ctx.fillRect(carX + 10, carY + 5, 60, 15);
+const carX = canvas.width / 2 + playerX * (canvas.width / 3) - (carWidth / 2);
+const carY = canvas.height - carHeight - 10;
 
-  // Painel de Velocidade (HUD)
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '20px Arial';
-  ctx.fillText(`Velocidade: ${Math.floor(speed / 100)} MPH`, 20, 40);
+ctx.drawImage(carSprite, carX, carY, carWidth, carHeight);
+
+ctx.fillStyle = '#ffffff';
+ctx.font = '20px Arial';
+ctx.fillText(`Velocidade: ${Math.floor(speed / 100)} MPH`, 20, 40);
 }
 
 // Loop principal com delta time
