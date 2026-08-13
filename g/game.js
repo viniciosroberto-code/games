@@ -2,7 +2,7 @@ const carSprite = new Image();
 carSprite.src = "skyli.png";
 
 const menuBG = new Image();
-menuBG.src = "MENU.png";
+menuBG.src = "Gemini_Generated_Image_ze3ousze3ousze3o.jpg";
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -19,9 +19,7 @@ function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().then(() => {
       resizeCanvas();
-    }).catch(err => {
-      console.log(`Erro ao ativar Tela Cheia: ${err.message}`);
-    });
+    }).catch(() => {});
   } else {
     if (document.exitFullscreen) {
       document.exitFullscreen();
@@ -33,7 +31,10 @@ if (fullscreenBtn) {
   fullscreenBtn.addEventListener('click', toggleFullscreen);
 }
 
-const hud = new HUD(canvas, ctx);
+let hud = null;
+if (typeof HUD !== 'undefined') {
+  hud = new HUD(canvas, ctx);
+}
 
 const ROAD_WIDTH = 1200;
 const SEGMENT_LENGTH = 200;
@@ -88,7 +89,6 @@ window.addEventListener('keydown', (e) => {
 
   if (gameState === 'menu' && (e.key === 'Enter' || e.key === ' ')) {
     gameState = 'playing';
-    toggleFullscreen();
   }
 });
 
@@ -108,7 +108,6 @@ function pollGamepad() {
 
       if (gameState === 'menu' && (btn(0) || btn(9) || btn(7))) {
         gameState = 'playing';
-        toggleFullscreen();
       }
 
       const axisY = gp.axes[1] || 0;
@@ -331,7 +330,10 @@ function draw() {
   }
 
   drawPlayer();
-  hud.render(speed, maxSpeed);
+
+  if (hud) {
+    hud.render(speed, maxSpeed);
+  }
 }
 
 let lastTime = 0;
