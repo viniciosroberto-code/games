@@ -7,23 +7,22 @@ class HUD {
   render(speed, maxSpeed) {
     const ctx = this.ctx;
     
-    const baseX = this.canvas.width - 220;
-    const baseY = this.canvas.height - 220;
+    const width = 240;
+    const height = 200;
+    const baseX = this.canvas.width - width - 20;
+    const baseY = this.canvas.height - height - 20;
 
     ctx.save();
-
-    ctx.font = 'bold 28px monospace';
-    ctx.textAlign = 'right';
 
     const rpmRatio = Math.min(speed / maxSpeed, 1);
     const totalBars = 12;
     const activeBars = Math.floor(rpmRatio * totalBars);
 
     for (let i = 0; i < totalBars; i++) {
-      const angle = -Math.PI * 0.8 + (i * 0.08);
-      const radius = 130;
-      const x = baseX + Math.cos(angle) * radius + 80;
-      const y = baseY + Math.sin(angle) * radius + 110;
+      const angle = -Math.PI * 0.75 + (i * 0.08);
+      const radius = 110;
+      const x = baseX + 120 + Math.cos(angle) * radius;
+      const y = baseY + 120 + Math.sin(angle) * radius;
 
       if (i < activeBars) {
         if (i < 7) ctx.fillStyle = '#00ff00';
@@ -33,21 +32,20 @@ class HUD {
         ctx.fillStyle = '#222222';
       }
 
-      ctx.fillRect(x, y, 10, 16);
+      ctx.fillRect(x, y, 8, 14);
     }
 
     const displaySpeed = Math.floor((speed / maxSpeed) * 180);
 
+    ctx.textAlign = 'right';
     ctx.fillStyle = '#ffff00';
-    ctx.font = 'bold 36px monospace';
-    ctx.fillText(displaySpeed.toString().padStart(3, ' '), baseX + 130, baseY + 60);
+    ctx.font = 'bold 32px monospace';
+    ctx.fillText(displaySpeed.toString().padStart(3, '0'), baseX + 190, baseY + 50);
 
-    ctx.font = 'bold 16px monospace';
-    ctx.fillText('MPH', baseX + 130, baseY + 80);
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText('MPH', baseX + 190, baseY + 68);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px monospace';
-    ctx.fillText('AUTO', baseX + 110, baseY + 105);
+    ctx.fillText('AUTO', baseX + 190, baseY + 90);
 
     let gear = '1';
     if (speed === 0) gear = '1';
@@ -57,41 +55,44 @@ class HUD {
     else gear = '4';
 
     const gears = ['R', '1', '2', '3', '4'];
-    let gearX = baseX + 30;
+    let gearX = baseX + 40;
+    ctx.textAlign = 'center';
     gears.forEach((g) => {
       if (g === gear) {
         ctx.fillStyle = '#ff9900';
       } else {
-        ctx.fillStyle = '#666666';
+        ctx.fillStyle = '#555555';
       }
-      ctx.fillText(g, gearX, baseY + 125);
-      gearX += 20;
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText(g, gearX, baseY + 112);
+      gearX += 18;
     });
 
     const carX = baseX + 40;
-    const carY = baseY + 135;
+    const carY = baseY + 122;
 
     ctx.fillStyle = '#00ff00';
-    ctx.fillRect(carX, carY, 60, 30);
+    ctx.fillRect(carX, carY, 50, 24);
     ctx.fillStyle = '#000000';
-    ctx.fillRect(carX + 15, carY + 5, 30, 20);
+    ctx.fillRect(carX + 12, carY + 4, 25, 16);
     ctx.fillStyle = '#ffff00';
-    ctx.fillRect(carX + 20, carY + 8, 10, 14);
+    ctx.fillRect(carX + 16, carY + 6, 8, 12);
 
-    const fuelY = baseY + 180;
+    const fuelY = baseY + 165;
+    ctx.textAlign = 'left';
     ctx.fillStyle = '#ff0000';
-    ctx.font = 'bold 14px monospace';
-    ctx.fillText('E', baseX - 10, fuelY + 12);
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('E', baseX + 20, fuelY + 10);
 
     ctx.fillStyle = '#00ff00';
-    ctx.fillText('F', baseX + 150, fuelY + 12);
+    ctx.fillText('F', baseX + 185, fuelY + 10);
 
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
-    ctx.strokeRect(baseX, fuelY, 130, 14);
+    ctx.strokeRect(baseX + 35, fuelY, 145, 12);
 
     ctx.fillStyle = '#ff9900';
-    ctx.fillRect(baseX + 2, fuelY + 2, 126, 10);
+    ctx.fillRect(baseX + 37, fuelY + 2, 141, 8);
 
     ctx.restore();
   }

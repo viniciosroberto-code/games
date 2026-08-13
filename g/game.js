@@ -32,9 +32,6 @@ if (fullscreenBtn) {
 }
 
 let hud = null;
-if (typeof HUD !== 'undefined') {
-  hud = new HUD(canvas, ctx);
-}
 
 const ROAD_WIDTH = 1200;
 const SEGMENT_LENGTH = 200;
@@ -331,6 +328,10 @@ function draw() {
 
   drawPlayer();
 
+  // Tenta instanciar se ainda não existia e renderiza
+  if (!hud && typeof HUD !== 'undefined') {
+    hud = new HUD(canvas, ctx);
+  }
   if (hud) {
     hud.render(speed, maxSpeed);
   }
