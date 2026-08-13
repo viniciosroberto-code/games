@@ -1,6 +1,9 @@
 const carSprite = new Image();
 carSprite.src = "skyli.png";
 
+const menuBG = new Image();
+menuBG.src = "Gemini_Generated_Image_ze3ousze3ousze3o.jpg";
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -47,50 +50,73 @@ let playerX = 0;
 let position = 0;
 let bgOffset = 0;
 
+let gameState = 'menu';
+
 const keys = {};
-window.addEventListener('keydown', (e) => (keys[e.key] = true));
+const gamepadKeys = {};
+
+window.addEventListener('keydown', (e) => {
+  keys[e.key] = true;
+
+  if (gameState === 'menu' && (e.key === 'Enter' || e.key === ' ')) {
+    gameState = 'playing';
+  }
+});
+
 window.addEventListener('keyup', (e) => (keys[e.key] = false));
 
 function pollGamepad() {
+  gamepadKeys['ArrowUp'] = false;
+  gamepadKeys['ArrowDown'] = false;
+  gamepadKeys['ArrowLeft'] = false;
+  gamepadKeys['ArrowRight'] = false;
+
   const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (let i = 0; i < gamepads.length; i++) {
     const gp = gamepads[i];
     if (gp) {
-      const upPressed = gp.buttons[0].pressed || gp.buttons[7].pressed || gp.axes[1] < -0.5;
-      const downPressed = gp.buttons[1].pressed || gp.buttons[6].pressed || gp.axes[1] > 0.5;
-      
-      if (upPressed) keys['ArrowUp'] = true;
-      if (downPressed) keys['ArrowDown'] = true;
+      const btn = (index) => gp.buttons[index] && gp.buttons[index].pressed;
 
-      let steer = gp.axes[0];
-      if (Math.abs(steer) > 0.1) {
-        if (steer < 0) {
-          keys['ArrowLeft'] = true;
-          keys['ArrowRight'] = false;
-        } else {
-          keys['ArrowLeft'] = false;
-          keys['ArrowRight'] = true;
-        }
-      } else {
-        if (gp.buttons[14].pressed) keys['ArrowLeft'] = true;
-        if (gp.buttons[15].pressed) keys['ArrowRight'] = true;
+      if (gameState === 'menu' && (btn(0) || btn(9) || btn(7))) {
+        gameState = 'playing';
       }
+
+      const axisY = gp.axes[1] || 0;
+      const axisX = gp.axes[0] || 0;
+
+      if (btn(0) || btn(7) || axisY < -0.3) gamepadKeys['ArrowUp'] = true;
+      if (btn(1) || btn(6) || axisY > 0.3) gamepadKeys['ArrowDown'] = true;
+
+      if (axisX < -0.2 || btn(14)) gamepadKeys['ArrowLeft'] = true;
+      if (axisX > 0.2 || btn(15)) gamepadKeys['ArrowRight'] = true;
+
       break;
     }
   }
 }
 
+function isPressed(key, altKey) {
+  return keys[key] || keys[altKey] || gamepadKeys[key];
+}
+
 function update(dt) {
   pollGamepad();
 
-  if (keys['ArrowUp'] || keys['w']) speed += accel * dt;
-  else if (keys['ArrowDown'] || keys['s']) speed += decel * dt;
+  if (gameState !== 'playing') return;
+
+  const pressingUp = isPressed('ArrowUp', 'w');
+  const pressingDown = isPressed('ArrowDown', 's');
+  const pressingLeft = isPressed('ArrowLeft', 'a');
+  const pressingRight = isPressed('ArrowRight', 'd');
+
+  if (pressingUp) speed += accel * dt;
+  else if (pressingDown) speed += decel * dt;
   else speed += decel * 0.5 * dt;
 
   speed = Math.max(0, Math.min(speed, maxSpeed));
 
-  if (keys['ArrowLeft'] || keys['a']) playerX -= 1.5 * dt;
-  if (keys['ArrowRight'] || keys['d']) playerX += 1.5 * dt;
+  if (pressingLeft) playerX -= 1.5 * dt;
+  if (pressingRight) playerX += 1.5 * dt;
 
   position += speed * dt;
   const trackLength = TOTAL_SEGMENTS * SEGMENT_LENGTH;
@@ -138,7 +164,26 @@ function drawPlayer() {
   }
 }
 
+function drawMenu() {
+  if (menuBG.complete && menuBG.naturalWidth !== 0) {
+    ctx.drawImage(menuBG, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 50px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('CARREGANDO...', canvas.width / 2, canvas.height / 2);
+  }
+}
+
 function draw() {
+  if (gameState === 'menu') {
+    drawMenu();
+    return;
+  }
+
   drawBackground();
 
   const startPos = Math.floor(position / SEGMENT_LENGTH);
@@ -258,32 +303,13 @@ function draw() {
   drawPlayer();
 }
 
-const fullscreenBtn = document.getElementById('fullscreenBtn');
-
-fullscreenBtn.addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    canvas.requestFullscreen().catch((err) => {
-      alert(`Erro ao tentar entrar em tela cheia: ${err.message}`);
-    });
-  } else {
-    document.exitFullscreen();
-  }
-});
-
 let lastTime = 0;
-function gameLoop(timestamp) {
-  if (!lastTime) lastTime = timestamp;
-  const dt = (timestamp - lastTime) / 1000;
-  lastTime = timestamp;
 
-  // Limpa o estado das setas do teclado a cada frame antes de ler o controle,
-  // permitindo que o teclado funcione perfeitamente junto com o gamepad.
-  if (!keys['ArrowUp']) keys['ArrowUp'] = false;
-  if (!keys['ArrowDown']) keys['ArrowDown'] = false;
-  if (!keys['ArrowLeft']) keys['ArrowLeft'] = false;
-  if (!keys['ArrowRight']) keys['ArrowRight'] = false;
+function gameLoop(time) {
+  const dt = Math.min((time - lastTime) / 1000, 0.1);
+  lastTime = time;
 
-  update(Math.min(dt, 0.1));
+  update(dt);
   draw();
 
   requestAnimationFrame(gameLoop);
