@@ -4,6 +4,9 @@ carSprite.src = "skyli.png";
 const menuBG = new Image();
 menuBG.src = "MENU.png";
 
+// Instância do sistema de som
+const engineSound = new EngineAudio();
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
@@ -145,11 +148,6 @@ class CustomHUD {
       ctx.fillRect(fuelX + 1, blockY, 10, blockH);
     }
 
-    ctx.font = 'bold 36px monospace';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'right';
-    ctx.fillText('12TH', width - 65, height - 25);
-
     const currentGear = this.getCurrentGear(speed, maxSpeed);
 
     ctx.font = 'bold 26px monospace';
@@ -159,14 +157,6 @@ class CustomHUD {
     ctx.shadowBlur = 4;
 
     ctx.fillText(`AUTO : ${currentGear}`, 30, height - 30);
-    ctx.shadowBlur = 0;
-
-    ctx.font = 'bold 32px monospace';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 6;
-    ctx.fillText('12TH', width / 2, height * 0.35);
     ctx.shadowBlur = 0;
 
     ctx.restore();
@@ -259,8 +249,16 @@ let gameState = 'menu';
 const keys = {};
 const gamepadKeys = {};
 
+// Libera áudio também no clique na tela
+window.addEventListener('click', () => {
+  if (engineSound) engineSound.init();
+});
+
 window.addEventListener('keydown', (e) => {
   keys[e.key] = true;
+
+  // Libera o áudio do navegador na primeira tecla
+  if (engineSound) engineSound.init();
 
   if (gameState === 'menu' && (e.key === 'Enter' || e.key === ' ')) {
     gameState = 'playing';
@@ -282,6 +280,7 @@ function pollGamepad() {
       const btn = (index) => gp.buttons[index] && gp.buttons[index].pressed;
 
       if (gameState === 'menu' && (btn(0) || btn(9) || btn(7))) {
+        if (engineSound) engineSound.init();
         gameState = 'playing';
       }
 
@@ -332,6 +331,10 @@ function update(dt) {
 
   const currentCurve = segments[0].curve;
   bgOffset -= currentCurve * (speed / maxSpeed) * 0.2;
+
+  // Atualização contínua do som do motor e trocas de marcha
+  const currentGear = hud ? hud.getCurrentGear(speed, maxSpeed) : 1;
+  engineSound.update(speed, maxSpeed, currentGear);
 }
 
 function drawBackground() {
