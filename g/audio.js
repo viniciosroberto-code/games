@@ -55,7 +55,7 @@ class EngineAudio {
   playMusic() {
     this.bgMusic = new Audio('musica.mp3');
     this.bgMusic.loop = true;
-    this.bgMusic.volume = 0.2;
+    this.bgMusic.volume = 0.5;
     this.bgMusic.play().catch(() => {});
   }
 
