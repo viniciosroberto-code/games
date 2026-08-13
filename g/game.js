@@ -145,6 +145,11 @@ class CustomHUD {
       ctx.fillRect(fuelX + 1, blockY, 10, blockH);
     }
 
+    ctx.font = 'bold 36px monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'right';
+    ctx.fillText('12TH', width - 65, height - 25);
+
     const currentGear = this.getCurrentGear(speed, maxSpeed);
 
     ctx.font = 'bold 26px monospace';
@@ -155,7 +160,15 @@ class CustomHUD {
 
     ctx.fillText(`AUTO : ${currentGear}`, 30, height - 30);
     ctx.shadowBlur = 0;
-    
+
+    ctx.font = 'bold 32px monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 6;
+    ctx.fillText('12TH', width / 2, height * 0.35);
+    ctx.shadowBlur = 0;
+
     ctx.restore();
   }
 }
