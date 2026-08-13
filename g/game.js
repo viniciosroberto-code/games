@@ -33,39 +33,87 @@ if (fullscreenBtn) {
 
 let hud = null;
 
-const ROAD_WIDTH = 1200;
+// ==========================================
+// AJUSTES DE PROPORÇÃO E PERSPECTIVA
+// ==========================================
+const ROAD_WIDTH = 500;
 const SEGMENT_LENGTH = 200;
-const CAM_DEPTH = 0.5;
+const CAM_DEPTH = 0.8;
+const VISIBLE_SEGMENTS = 300; // Mantém 300 segmentos na memória por vez
 
 const segments = [];
-const TOTAL_SEGMENTS = 1000;
+let totalSegmentsGenerated = 0;
 
-for (let i = 0; i < TOTAL_SEGMENTS; i++) {
-  let curve = 0;
-  let type = 'normal';
-  let hasSign = false;
-  let signSide = 'left';
+// Controle do Gerador Aleatório em Blocos
+let pendingSegments = [];
 
-  if (i > 150 && i <= 300) {
-    curve = 2;
-    type = 'mountain';
-  } else if (i > 300 && i <= 450) {
-    curve = -3;
-    type = 'mountain';
-  } else if (i > 500 && i <= 700) {
-    curve = 1;
-    type = 'tunnel';
-  } else if (i > 750 && i <= 900) {
-    curve = -2;
-    type = 'mountain';
+function generateNextBlock() {
+  // Sorteia tamanho do trecho (entre 50 e 130 segmentos)
+  const enterLength = 30; // Rampa de entrada da curva
+  const leaveLength = 30; // Rampa de saída da curva
+  const holdLength = Math.floor(Math.random() * 60) + 20; // Duração da curva mantida
+  
+  // 35% de chance de ser reta, 65% de ser curva
+  const isStraight = Math.random() < 0.35;
+  const targetCurve = isStraight ? 0 : (Math.random() * 6 - 3); // Valor entre -3.0 e +3.0
+  const isTunnel = Math.random() < 0.15; // 15% de chance de ser túnel
+  const type = isTunnel ? 'tunnel' : 'normal';
+
+  const total = enterLength + holdLength + leaveLength;
+
+  for (let i = 0; i < total; i++) {
+    let curve = 0;
+
+    if (targetCurve === 0) {
+      curve = 0;
+    } else if (i < enterLength) {
+      // Ease-in (início suave)
+      curve = targetCurve * (i / enterLength);
+    } else if (i < enterLength + holdLength) {
+      // Meio da curva
+      curve = targetCurve;
+    } else {
+      // Ease-out (fim suave)
+      const progress = (i - enterLength - holdLength) / leaveLength;
+      curve = targetCurve * (1 - progress);
+    }
+
+    const globalIndex = totalSegmentsGenerated++;
+    const hasSign = (globalIndex % 40 === 0) && type !== 'tunnel';
+    const signSide = globalIndex % 80 === 0 ? 'left' : 'right';
+
+    pendingSegments.push({
+      index: globalIndex,
+      curve: curve,
+      type: type,
+      hasSign: hasSign,
+      signSide: signSide
+    });
   }
+}
 
-  if (i % 40 === 0 && type !== 'tunnel') {
-    hasSign = true;
-    signSide = i % 80 === 0 ? 'left' : 'right';
+function getNextSegment() {
+  if (pendingSegments.length === 0) {
+    generateNextBlock();
   }
+  return pendingSegments.shift();
+}
 
-  segments.push({ curve, type, hasSign, signSide });
+// Inicializa a pista com os primeiros segmentos
+for (let i = 0; i < VISIBLE_SEGMENTS; i++) {
+  if (i < 60) {
+    // Primeiros 60 segmentos sempre retos para o início de jogo
+    const globalIndex = totalSegmentsGenerated++;
+    segments.push({
+      index: globalIndex,
+      curve: 0,
+      type: 'normal',
+      hasSign: globalIndex % 40 === 0,
+      signSide: 'left'
+    });
+  } else {
+    segments.push(getNextSegment());
+  }
 }
 
 let speed = 0;
@@ -144,12 +192,16 @@ function update(dt) {
   if (pressingLeft) playerX -= 1.5 * dt;
   if (pressingRight) playerX += 1.5 * dt;
 
+  // Atualização infinita da posição
   position += speed * dt;
-  const trackLength = TOTAL_SEGMENTS * SEGMENT_LENGTH;
-  while (position >= trackLength) position -= trackLength;
 
-  const currentSegmentIndex = Math.floor(position / SEGMENT_LENGTH) % TOTAL_SEGMENTS;
-  const currentCurve = segments[currentSegmentIndex].curve;
+  while (position >= SEGMENT_LENGTH) {
+    position -= SEGMENT_LENGTH;
+    segments.shift(); // Remove o segmento ultrapassado
+    segments.push(getNextSegment()); // Cria um novo no horizonte
+  }
+
+  const currentCurve = segments[0].curve;
   bgOffset -= currentCurve * (speed / maxSpeed) * 0.2;
 }
 
@@ -176,11 +228,12 @@ function drawBackground() {
   ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
 }
 
-function drawPlayer() {
-  const carWidth = 150;
-  const carHeight = 100;
-  const carX = canvas.width / 2 + playerX * 300 - carWidth / 2;
-  const carY = canvas.height - carHeight - 20;
+function drawPlayer(bottomRoadWidth) {
+  const carWidth = bottomRoadWidth * 0.45; 
+  const carHeight = carWidth * 0.55; 
+
+  const carX = canvas.width / 2 + (playerX * bottomRoadWidth * 0.8) - (carWidth / 2);
+  const carY = canvas.height - carHeight - 15;
 
   if (carSprite.complete && carSprite.naturalWidth !== 0) {
     ctx.drawImage(carSprite, carX, carY, carWidth, carHeight);
@@ -212,23 +265,23 @@ function draw() {
 
   drawBackground();
 
-  const startPos = Math.floor(position / SEGMENT_LENGTH);
-  let dx = 0;
-  let camX = 0;
-
+  // Fração exata de avanço no segmento atual (0.0 a 1.0)
+  const percent = position / SEGMENT_LENGTH;
+  
+  let camX = -segments[0].curve * percent;
   const horizonY = canvas.height * 0.4;
+  let bottomRoadWidth = ROAD_WIDTH;
 
-  for (let n = 0; n < 100; n++) {
-    const segmentIndex = (startPos + n) % TOTAL_SEGMENTS;
-    const segment = segments[segmentIndex];
+  // Renderiza até 100 segmentos à frente
+  for (let n = 0; n < 100 && n < segments.length; n++) {
+    const segment = segments[n];
 
-    const z1 = n * SEGMENT_LENGTH - (position % SEGMENT_LENGTH);
-    const z2 = (n + 1) * SEGMENT_LENGTH - (position % SEGMENT_LENGTH);
+    const z1 = n * SEGMENT_LENGTH - position;
+    const z2 = (n + 1) * SEGMENT_LENGTH - position;
 
     if (z1 <= 0) continue;
 
-    dx += segment.curve;
-    camX += dx;
+    camX += segment.curve;
 
     const scale1 = CAM_DEPTH / (z1 / 1000);
     const scale2 = CAM_DEPTH / (z2 / 1000);
@@ -241,7 +294,11 @@ function draw() {
     const y2 = horizonY + (1 / z2) * 120000;
     const w2 = ROAD_WIDTH * scale2;
 
-    const isEven = segmentIndex % 2 === 0;
+    if (n === 0) {
+      bottomRoadWidth = w1;
+    }
+
+    const isEven = segment.index % 2 === 0;
     const roadColor = isEven ? '#555555' : '#444444';
     const grassColor = isEven ? '#225522' : '#1e4b1e';
 
@@ -260,10 +317,10 @@ function draw() {
     if (isEven && segment.type !== 'tunnel') {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(x1 - w1 * 0.015, y1);
-      ctx.lineTo(x1 + w1 * 0.015, y1);
-      ctx.lineTo(x2 + w2 * 0.015, y2);
-      ctx.lineTo(x2 - w2 * 0.015, y2);
+      ctx.moveTo(x1 - w1 * 0.02, y1);
+      ctx.lineTo(x1 + w1 * 0.02, y1);
+      ctx.lineTo(x2 + w2 * 0.02, y2);
+      ctx.lineTo(x2 - w2 * 0.02, y2);
       ctx.closePath();
       ctx.fill();
     }
@@ -326,9 +383,8 @@ function draw() {
     }
   }
 
-  drawPlayer();
+  drawPlayer(bottomRoadWidth);
 
-  // Tenta instanciar se ainda não existia e renderiza
   if (!hud && typeof HUD !== 'undefined') {
     hud = new HUD(canvas, ctx);
   }
