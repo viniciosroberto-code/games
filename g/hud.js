@@ -28,92 +28,56 @@ class CustomHUD {
     return 6;
   }
 
-  drawTurnWarning(segments) {
-    if (!segments || segments.length < 30) return;
-
-    let aheadCurve = 0;
-    for (let i = 10; i < 40; i++) {
-      if (segments[i] && Math.abs(segments[i].curve) > 1.2) {
-        aheadCurve = segments[i].curve;
-        break;
-      }
-    }
-
-    if (Math.abs(aheadCurve) > 1.2) {
-      const ctx = this.ctx;
-      const x = this.canvas.width / 2;
-      const y = this.canvas.height * 0.22;
-
-      ctx.save();
-      ctx.fillStyle = '#ffcc00';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 4;
-
-      ctx.beginPath();
-      ctx.moveTo(x, y - 35);
-      ctx.lineTo(x + 35, y + 25);
-      ctx.lineTo(x - 35, y + 25);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 28px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const arrow = aheadCurve > 0 ? '➔' : '⬅';
-      ctx.fillText(arrow, x, y + 3);
-
-      ctx.restore();
-    }
-  }
-
-  drawMinimap(segments, playerX) {
-    if (!segments || segments.length === 0) return;
-
+  // Renderiza o Minimapa do Circuito
+  renderMinimap(segments, currentSegmentIndex) {
     const ctx = this.ctx;
-    const mapWidth = 140;
-    const mapHeight = 160;
     const mapX = 30;
-    const mapY = 30;
+    const mapY = this.canvas.height - 220;
+    const mapWidth = 140;
+    const mapHeight = 140;
 
     ctx.save();
+    // Fundo do Mapa
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = '#555555';
     ctx.lineWidth = 2;
     ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
     ctx.strokeRect(mapX, mapY, mapWidth, mapHeight);
 
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 3;
+    // Desenhar Traçado da Pista à Frente
     ctx.beginPath();
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
 
-    let curX = mapX + mapWidth / 2;
-    let curY = mapY + mapHeight - 15;
+    let posX = mapX + mapWidth / 2;
+    let posY = mapY + mapHeight - 10;
+    ctx.moveTo(posX, posY);
 
-    ctx.moveTo(curX, curY);
+    const step = 2;
+    const maxLookAhead = 120; // Quantos segmentos desenhar no mapa
 
-    const stepY = (mapHeight - 30) / 60;
+    for (let i = 0; i < maxLookAhead; i += step) {
+      const segIndex = (currentSegmentIndex + i) % segments.length;
+      const seg = segments[segIndex];
+      if (!seg) break;
 
-    for (let i = 0; i < 60 && i < segments.length; i++) {
-      curX += segments[i].curve * 2.5;
-      curY -= stepY;
-      ctx.lineTo(curX, curY);
+      posX -= seg.curve * 1.8; // Deslocamento lateral da curva
+      posY -= (mapHeight / maxLookAhead) * step; // Avanço para cima
+
+      ctx.lineTo(posX, posY);
     }
     ctx.stroke();
 
-    const playerMapX = mapX + mapWidth / 2 + (playerX * 15);
-    const playerMapY = mapY + mapHeight - 15;
-
+    // Ponto representando o Jogador
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
-    ctx.arc(playerMapX, playerMapY, 4, 0, Math.PI * 2);
+    ctx.arc(mapX + mapWidth / 2, mapY + mapHeight - 10, 4, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 
-  render(speed, maxSpeed, dt = 0.016, segments = [], playerX = 0) {
+  render(speed, maxSpeed, dt = 0.016, segments = [], playerX = 0, currentSegmentIndex = 0) {
     this.time += dt;
     const ctx = this.ctx;
     const width = this.canvas.width;
@@ -127,6 +91,7 @@ class CustomHUD {
     const topRightX = width - 230;
     const topRightY = 20;
 
+    // Marcador de Tacômetro/RPM
     const rpmPercent = Math.min(1, speed / maxSpeed);
     const totalBlocks = 18;
     const activeBlocks = Math.floor(rpmPercent * totalBlocks);
@@ -149,6 +114,7 @@ class CustomHUD {
     }
     ctx.restore();
 
+    // Velocímetro Digital
     ctx.fillStyle = '#0a0000';
     ctx.fillRect(topRightX + 20, topRightY + 25, 170, 50);
     ctx.strokeStyle = '#444444';
@@ -167,6 +133,7 @@ class CustomHUD {
     ctx.font = 'bold 16px "Courier New", monospace';
     ctx.fillText('km/h', topRightX + 185, topRightY + 60);
 
+    // Cronômetro
     ctx.font = fontRetro;
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'right';
@@ -175,6 +142,7 @@ class CustomHUD {
     ctx.fillText(this.formatTime(this.time), topRightX + 185, topRightY + 105);
     ctx.shadowBlur = 0;
 
+    // Barra de Combustível
     const fuelX = width - 40;
     const fuelY = height - 190;
     const fuelHeight = 130;
@@ -197,20 +165,21 @@ class CustomHUD {
       ctx.fillRect(fuelX + 1, blockY, 10, blockH);
     }
 
+    // Indicador de Marcha
     const currentGear = this.getCurrentGear(speed, maxSpeed);
-
     ctx.font = 'bold 26px monospace';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
     ctx.shadowColor = '#000';
     ctx.shadowBlur = 4;
-
     ctx.fillText(`AUTO : ${currentGear}`, 30, height - 30);
     ctx.shadowBlur = 0;
 
     ctx.restore();
 
-    this.drawTurnWarning(segments);
-    this.drawMinimap(segments, playerX);
+    // Renderiza o mapa se houver segmentos
+    if (segments.length > 0) {
+      this.renderMinimap(segments, currentSegmentIndex);
+    }
   }
 }

@@ -4,14 +4,13 @@ carSprite.src = "skyli.png";
 const menuBG = new Image();
 menuBG.src = "MENU.png";
 
-// Instância usando a classe declarada em audio.js
+// Instância do áudio
 const engineSound = new EngineAudio();
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-// Instância usando a classe declarada em hud.js
 const hud = new CustomHUD(canvas, ctx);
 
 function resizeCanvas() {
@@ -37,7 +36,7 @@ if (fullscreenBtn) {
   fullscreenBtn.addEventListener('click', toggleFullscreen);
 }
 
-// Configurações da pista e Pseudo-3D
+// Configurações de Pista
 const ROAD_WIDTH = 500;
 const SEGMENT_LENGTH = 200;
 const CAM_DEPTH = 0.8;
@@ -74,15 +73,20 @@ function generateNextBlock() {
     }
 
     const globalIndex = totalSegmentsGenerated++;
-    const hasSign = (globalIndex % 40 === 0) && type !== 'tunnel';
-    const signSide = globalIndex % 80 === 0 ? 'left' : 'right';
+    
+    // Define se deve colocar placa de curva
+    const isEnteringCurve = (i === Math.floor(enterLength / 2)) && Math.abs(targetCurve) > 0.8;
+    const hasSign = isEnteringCurve && type !== 'tunnel';
+    const signDirection = targetCurve > 0 ? 'right' : 'left';
+    const signSide = targetCurve > 0 ? 'left' : 'right'; // Coloca a placa do lado oposto à curva
 
     pendingSegments.push({
       index: globalIndex,
       curve: curve,
       type: type,
       hasSign: hasSign,
-      signSide: signSide
+      signSide: signSide,
+      signDirection: signDirection
     });
   }
 }
@@ -101,8 +105,9 @@ for (let i = 0; i < VISIBLE_SEGMENTS; i++) {
       index: globalIndex,
       curve: 0,
       type: 'normal',
-      hasSign: globalIndex % 40 === 0,
-      signSide: 'left'
+      hasSign: false,
+      signSide: 'left',
+      signDirection: 'left'
     });
   } else {
     segments.push(getNextSegment());
@@ -116,6 +121,7 @@ let decel = -2500;
 let playerX = 0;
 let position = 0;
 let bgOffset = 0;
+let currentSegmentIndex = 0;
 
 let gameState = 'menu';
 
@@ -196,6 +202,7 @@ function update(dt) {
 
   while (position >= SEGMENT_LENGTH) {
     position -= SEGMENT_LENGTH;
+    currentSegmentIndex++;
     segments.shift();
     segments.push(getNextSegment());
   }
@@ -259,6 +266,39 @@ function drawMenu() {
   }
 }
 
+// Desenha as placas de aviso de curva nas margens da pista
+function drawCurveSign(x, y, scale, direction) {
+  const width = 70 * scale;
+  const height = 70 * scale;
+  const poleWidth = 6 * scale;
+  const poleHeight = 60 * scale;
+
+  // Poste da Placa
+  ctx.fillStyle = '#777777';
+  ctx.fillRect(x - poleWidth / 2, y, poleWidth, poleHeight);
+
+  // Placa Amarela de Sinalização
+  ctx.save();
+  ctx.translate(x, y - height / 2);
+  ctx.rotate(Math.PI / 4); // Rotaciona para formar um losango
+  ctx.fillStyle = '#ffcc00';
+  ctx.fillRect(-width / 2, -height / 2, width, height);
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 4 * scale;
+  ctx.strokeRect(-width / 2, -height / 2, width, height);
+  ctx.restore();
+
+  // Seta Indicadora dentro da Placa
+  ctx.save();
+  ctx.translate(x, y - height / 2);
+  ctx.fillStyle = '#000000';
+  ctx.font = `bold ${Math.floor(45 * scale)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(direction === 'right' ? '➔' : '⬅', 0, 0);
+  ctx.restore();
+}
+
 function draw(dt) {
   if (gameState === 'menu') {
     drawMenu();
@@ -301,9 +341,11 @@ function draw(dt) {
     const roadColor = isEven ? '#555555' : '#444444';
     const grassColor = isEven ? '#225522' : '#1e4b1e';
 
+    // Grama
     ctx.fillStyle = grassColor;
     ctx.fillRect(0, y2, canvas.width, y1 - y2);
 
+    // Pista
     ctx.fillStyle = roadColor;
     ctx.beginPath();
     ctx.moveTo(x1 - w1, y1);
@@ -313,6 +355,7 @@ function draw(dt) {
     ctx.closePath();
     ctx.fill();
 
+    // Faixa central da pista
     if (isEven && segment.type !== 'tunnel') {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -324,31 +367,13 @@ function draw(dt) {
       ctx.fill();
     }
 
+    // Renderizar Placa de Curva
     if (segment.hasSign && segment.type !== 'tunnel') {
-      const signScale = scale1;
-      const signWidth = 60 * signScale;
-      const signHeight = 80 * signScale;
-      const poleWidth = 8 * signScale;
-
-      const signX = segment.signSide === 'left' ? x1 - w1 - signWidth * 1.5 : x1 + w1 + signWidth * 0.5;
-      const signY = y1 - signHeight;
-
-      ctx.fillStyle = '#888888';
-      ctx.fillRect(signX + signWidth / 2 - poleWidth / 2, signY, poleWidth, signHeight);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(signX, signY, signWidth, signHeight * 0.7);
-
-      ctx.strokeStyle = '#ff0000';
-      ctx.lineWidth = 3 * signScale;
-      ctx.strokeRect(signX, signY, signWidth, signHeight * 0.7);
-
-      ctx.fillStyle = '#ff0000';
-      ctx.beginPath();
-      ctx.arc(signX + signWidth / 2, signY + (signHeight * 0.7) / 2, signWidth * 0.25, 0, Math.PI * 2);
-      ctx.fill();
+      const signX = segment.signSide === 'left' ? x1 - w1 - 80 * scale1 : x1 + w1 + 80 * scale1;
+      drawCurveSign(signX, y1, scale1, segment.signDirection);
     }
 
+    // Túneis
     if (segment.type === 'tunnel') {
       const wallHeight1 = scale1 * 800;
       const wallHeight2 = scale2 * 800;
@@ -383,7 +408,9 @@ function draw(dt) {
   }
 
   drawPlayer(bottomRoadWidth);
-  hud.render(speed, maxSpeed, dt);
+
+  // Renderiza o HUD e passa os parâmetros adicionais do minimapa
+  hud.render(speed, maxSpeed, dt, segments, playerX, currentSegmentIndex);
 }
 
 let lastTime = 0;
