@@ -28,7 +28,6 @@ class CustomHUD {
     return 6;
   }
 
-  // Desenha o minimapa 100% sincronizado com os segmentos atuais
   renderMinimap(segments) {
     const ctx = this.ctx;
     const mapX = 30;
@@ -37,14 +36,12 @@ class CustomHUD {
     const mapHeight = 130;
 
     ctx.save();
-    // Fundo do Mapa
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.strokeStyle = '#555555';
     ctx.lineWidth = 2;
     ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
     ctx.strokeRect(mapX, mapY, mapWidth, mapHeight);
 
-    // Desenha o desenho exato das curvas à frente
     ctx.beginPath();
     ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 3;
@@ -60,17 +57,14 @@ class CustomHUD {
       const seg = segments[i];
       if (!seg) break;
 
-      posX -= seg.curve * 1.5; // Curvatura real da pista
-      posY -= (mapHeight / maxSegments) * step;
-
-      // Mantém a linha dentro da caixa do mapa
+      posX -= seg.curve * 1.5;
       posX = Math.max(mapX + 5, Math.min(mapX + mapWidth - 5, posX));
 
+      posY -= (mapHeight / maxSegments) * step;
       ctx.lineTo(posX, posY);
     }
     ctx.stroke();
 
-    // Ponto do Jogador
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.arc(mapX + mapWidth / 2, mapY + mapHeight - 10, 4, 0, Math.PI * 2);
@@ -79,9 +73,7 @@ class CustomHUD {
     ctx.restore();
   }
 
-  // Desenha o aviso de curva gigante no meio da tela
   renderCenterWarning(segments) {
-    // Procura por curvas fortes nos próximos 40 segmentos à frente
     let upcomingCurve = 0;
     for (let i = 5; i < 45 && i < segments.length; i++) {
       if (Math.abs(segments[i].curve) > 1.2) {
@@ -92,7 +84,6 @@ class CustomHUD {
 
     if (upcomingCurve === 0) return;
 
-    // Efeito de piscar o aviso
     if (Math.floor(this.time * 6) % 2 === 0) return;
 
     const ctx = this.ctx;
@@ -100,11 +91,9 @@ class CustomHUD {
     const centerY = this.canvas.height * 0.25;
 
     ctx.save();
-
-    // Placa Amarela de Aviso
     const boxSize = 70;
     ctx.translate(centerX, centerY);
-    ctx.rotate(Math.PI / 4); // Forma de losango
+    ctx.rotate(Math.PI / 4);
     ctx.fillStyle = '#ffcc00';
     ctx.fillRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize);
     ctx.strokeStyle = '#000000';
@@ -112,14 +101,14 @@ class CustomHUD {
     ctx.strokeRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize);
     ctx.restore();
 
-    // Seta Preta de Curva
+    // Seta corrigida: 'curve > 0' é ESQUERDA e 'curve < 0' é DIREITA
     ctx.save();
     ctx.translate(centerX, centerY);
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 45px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(upcomingCurve > 0 ? '➔' : '⬅', 0, 0);
+    ctx.fillText(upcomingCurve > 0 ? '⬅' : '➔', 0, 0);
     ctx.restore();
   }
 
@@ -137,7 +126,6 @@ class CustomHUD {
     const topRightX = width - 230;
     const topRightY = 20;
 
-    // Marcador de Tacômetro/RPM
     const rpmPercent = Math.min(1, speed / maxSpeed);
     const totalBlocks = 18;
     const activeBlocks = Math.floor(rpmPercent * totalBlocks);
@@ -160,7 +148,6 @@ class CustomHUD {
     }
     ctx.restore();
 
-    // Velocímetro Digital
     ctx.fillStyle = '#0a0000';
     ctx.fillRect(topRightX + 20, topRightY + 25, 170, 50);
     ctx.strokeStyle = '#444444';
@@ -179,7 +166,6 @@ class CustomHUD {
     ctx.font = 'bold 16px "Courier New", monospace';
     ctx.fillText('km/h', topRightX + 185, topRightY + 60);
 
-    // Cronômetro
     ctx.font = fontRetro;
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'right';
@@ -188,7 +174,6 @@ class CustomHUD {
     ctx.fillText(this.formatTime(this.time), topRightX + 185, topRightY + 105);
     ctx.shadowBlur = 0;
 
-    // Barra de Combustível
     const fuelX = width - 40;
     const fuelY = height - 190;
     const fuelHeight = 130;
@@ -211,7 +196,6 @@ class CustomHUD {
       ctx.fillRect(fuelX + 1, blockY, 10, blockH);
     }
 
-    // Indicador de Marcha
     const currentGear = this.getCurrentGear(speed, maxSpeed);
     ctx.font = 'bold 26px monospace';
     ctx.fillStyle = '#ffffff';

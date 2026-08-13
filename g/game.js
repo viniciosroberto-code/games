@@ -4,7 +4,6 @@ carSprite.src = "skyli.png";
 const menuBG = new Image();
 menuBG.src = "MENU.png";
 
-// Instância do áudio
 const engineSound = new EngineAudio();
 
 const canvas = document.getElementById('gameCanvas');
@@ -36,7 +35,6 @@ if (fullscreenBtn) {
   fullscreenBtn.addEventListener('click', toggleFullscreen);
 }
 
-// Configurações de Pista
 const ROAD_WIDTH = 500;
 const SEGMENT_LENGTH = 200;
 const CAM_DEPTH = 0.8;
@@ -74,11 +72,13 @@ function generateNextBlock() {
 
     const globalIndex = totalSegmentsGenerated++;
     
-    // Gera placas na beira da estrada antes do início da curva
+    // Placas geradas logo antes do início da curva
     const isEnteringCurve = (i === Math.floor(enterLength / 3)) && Math.abs(targetCurve) > 1.0;
     const hasSign = isEnteringCurve && type !== 'tunnel';
-    const signDirection = targetCurve > 0 ? 'right' : 'left';
-    const signSide = targetCurve > 0 ? 'left' : 'right'; 
+    
+    // Direção corrigida: targetCurve > 0 é ESQUERDA, targetCurve < 0 é DIREITA
+    const signDirection = targetCurve > 0 ? 'left' : 'right';
+    const signSide = targetCurve > 0 ? 'right' : 'left'; // Placa do lado oposto para melhor visualização
 
     pendingSegments.push({
       index: globalIndex,
@@ -264,7 +264,6 @@ function drawMenu() {
   }
 }
 
-// Placas na borda da pista
 function drawCurveSign(x, y, scale, direction) {
   const width = 80 * scale;
   const height = 80 * scale;
@@ -284,13 +283,14 @@ function drawCurveSign(x, y, scale, direction) {
   ctx.strokeRect(-width / 2, -height / 2, width, height);
   ctx.restore();
 
+  // Seta da placa na borda da pista
   ctx.save();
   ctx.translate(x, y - height / 2);
   ctx.fillStyle = '#000000';
   ctx.font = `bold ${Math.floor(50 * scale)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(direction === 'right' ? '➔' : '⬅', 0, 0);
+  ctx.fillText(direction === 'left' ? '⬅' : '➔', 0, 0);
   ctx.restore();
 }
 
