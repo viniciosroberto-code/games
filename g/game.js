@@ -40,9 +40,9 @@ for (let i = 0; i < TOTAL_SEGMENTS; i++) {
 }
 
 let speed = 0;
-let maxSpeed = 12000;
-let accel = 3000;
-let decel = -4000;
+let maxSpeed = 6000;
+let accel = 1500;
+let decel = -2500;
 let playerX = 0;
 let position = 0;
 let bgOffset = 0;
@@ -51,7 +51,35 @@ const keys = {};
 window.addEventListener('keydown', (e) => (keys[e.key] = true));
 window.addEventListener('keyup', (e) => (keys[e.key] = false));
 
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (let i = 0; i < gamepads.length; i++) {
+    const gp = gamepads[i];
+    if (gp) {
+      keys['ArrowUp'] = gp.buttons[0].pressed || gp.buttons[7].pressed || gp.axes[1] < -0.5;
+      keys['ArrowDown'] = gp.buttons[1].pressed || gp.buttons[6].pressed || gp.axes[1] > 0.5;
+      
+      let steer = gp.axes[0];
+      if (Math.abs(steer) > 0.1) {
+        if (steer < 0) {
+          keys['ArrowLeft'] = true;
+          keys['ArrowRight'] = false;
+        } else {
+          keys['ArrowLeft'] = false;
+          keys['ArrowRight'] = true;
+        }
+      } else {
+        keys['ArrowLeft'] = gp.buttons[14].pressed;
+        keys['ArrowRight'] = gp.buttons[15].pressed;
+      }
+      break;
+    }
+  }
+}
+
 function update(dt) {
+  pollGamepad();
+
   if (keys['ArrowUp'] || keys['w']) speed += accel * dt;
   else if (keys['ArrowDown'] || keys['s']) speed += decel * dt;
   else speed += decel * 0.5 * dt;
@@ -226,6 +254,18 @@ function draw() {
 
   drawPlayer();
 }
+
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+fullscreenBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    canvas.requestFullscreen().catch((err) => {
+      alert(`Erro ao tentar entrar em tela cheia: ${err.message}`);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+});
 
 let lastTime = 0;
 function gameLoop(timestamp) {
