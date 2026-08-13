@@ -7,7 +7,37 @@ const ctx = canvas.getContext('2d');
 const ROAD_WIDTH = 1200;
 const SEGMENT_LENGTH = 200;
 const CAM_DEPTH = 0.5;
-const totalSegments = 500;
+
+const segments = [];
+const TOTAL_SEGMENTS = 1000;
+
+for (let i = 0; i < TOTAL_SEGMENTS; i++) {
+  let curve = 0;
+  let type = 'normal';
+  let hasSign = false;
+  let signSide = 'left';
+
+  if (i > 150 && i <= 300) {
+    curve = 2;
+    type = 'mountain';
+  } else if (i > 300 && i <= 450) {
+    curve = -3;
+    type = 'mountain';
+  } else if (i > 500 && i <= 700) {
+    curve = 1;
+    type = 'tunnel';
+  } else if (i > 750 && i <= 900) {
+    curve = -2;
+    type = 'mountain';
+  }
+
+  if (i % 40 === 0 && type !== 'tunnel') {
+    hasSign = true;
+    signSide = i % 80 === 0 ? 'left' : 'right';
+  }
+
+  segments.push({ curve, type, hasSign, signSide });
+}
 
 let speed = 0;
 let maxSpeed = 12000;
@@ -15,6 +45,7 @@ let accel = 3000;
 let decel = -4000;
 let playerX = 0;
 let position = 0;
+let bgOffset = 0;
 
 const keys = {};
 window.addEventListener('keydown', (e) => (keys[e.key] = true));
@@ -31,41 +62,86 @@ function update(dt) {
   if (keys['ArrowRight'] || keys['d']) playerX += 1.5 * dt;
 
   position += speed * dt;
-  const trackLength = totalSegments * SEGMENT_LENGTH;
+  const trackLength = TOTAL_SEGMENTS * SEGMENT_LENGTH;
   while (position >= trackLength) position -= trackLength;
+
+  const currentSegmentIndex = Math.floor(position / SEGMENT_LENGTH) % TOTAL_SEGMENTS;
+  const currentCurve = segments[currentSegmentIndex].curve;
+  bgOffset -= currentCurve * (speed / maxSpeed) * 0.2;
+}
+
+function drawBackground() {
+  const horizonY = canvas.height * 0.4;
+
+  ctx.fillStyle = '#1b263b';
+  ctx.fillRect(0, 0, canvas.width, horizonY);
+
+  ctx.fillStyle = '#0d1b2a';
+  ctx.beginPath();
+  ctx.moveTo(0, horizonY);
+
+  for (let x = 0; x <= canvas.width; x += 50) {
+    const mountainHeight = Math.sin((x + bgOffset * 10) * 0.01) * 40 + 60;
+    ctx.lineTo(x, horizonY - mountainHeight);
+  }
+
+  ctx.lineTo(canvas.width, horizonY);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#1e381e';
+  ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
+}
+
+function drawPlayer() {
+  const carWidth = 150;
+  const carHeight = 100;
+  const carX = canvas.width / 2 + playerX * 300 - carWidth / 2;
+  const carY = canvas.height - carHeight - 20;
+
+  if (carSprite.complete && carSprite.naturalWidth !== 0) {
+    ctx.drawImage(carSprite, carX, carY, carWidth, carHeight);
+  } else {
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(carX, carY, carWidth, carHeight);
+  }
 }
 
 function draw() {
-  ctx.fillStyle = '#0055aa';
-  ctx.fillRect(0, 0, canvas.width, canvas.height * 0.4);
-
-  ctx.fillStyle = '#008800';
-  ctx.fillRect(0, canvas.height * 0.4, canvas.width, canvas.height * 0.6);
+  drawBackground();
 
   const startPos = Math.floor(position / SEGMENT_LENGTH);
+  let dx = 0;
+  let camX = 0;
 
-  for (let n = 0; n < 120; n++) {
-    const segmentIndex = (startPos + n) % totalSegments;
-    
+  const horizonY = canvas.height * 0.4;
+
+  for (let n = 0; n < 100; n++) {
+    const segmentIndex = (startPos + n) % TOTAL_SEGMENTS;
+    const segment = segments[segmentIndex];
+
     const z1 = n * SEGMENT_LENGTH - (position % SEGMENT_LENGTH);
     const z2 = (n + 1) * SEGMENT_LENGTH - (position % SEGMENT_LENGTH);
 
     if (z1 <= 0) continue;
 
+    dx += segment.curve;
+    camX += dx;
+
     const scale1 = CAM_DEPTH / (z1 / 1000);
     const scale2 = CAM_DEPTH / (z2 / 1000);
 
-    const x1 = canvas.width / 2;
-    const y1 = canvas.height * 0.4 + (1 / z1) * 120000;
+    const x1 = canvas.width / 2 - (camX - segment.curve) * scale1 * 20;
+    const y1 = horizonY + (1 / z1) * 120000;
     const w1 = ROAD_WIDTH * scale1;
 
-    const x2 = canvas.width / 2;
-    const y2 = canvas.height * 0.4 + (1 / z2) * 120000;
+    const x2 = canvas.width / 2 - camX * scale2 * 20;
+    const y2 = horizonY + (1 / z2) * 120000;
     const w2 = ROAD_WIDTH * scale2;
 
     const isEven = segmentIndex % 2 === 0;
-    const roadColor = isEven ? '#666666' : '#555555';
-    const grassColor = isEven ? '#00aa00' : '#008800';
+    const roadColor = isEven ? '#555555' : '#444444';
+    const grassColor = isEven ? '#225522' : '#1e4b1e';
 
     ctx.fillStyle = grassColor;
     ctx.fillRect(0, y2, canvas.width, y1 - y2);
@@ -79,7 +155,7 @@ function draw() {
     ctx.closePath();
     ctx.fill();
 
-    if (isEven) {
+    if (isEven && segment.type !== 'tunnel') {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.moveTo(x1 - w1 * 0.015, y1);
@@ -89,31 +165,78 @@ function draw() {
       ctx.closePath();
       ctx.fill();
     }
+
+    if (segment.hasSign && segment.type !== 'tunnel') {
+      const signScale = scale1;
+      const signWidth = 60 * signScale;
+      const signHeight = 80 * signScale;
+      const poleWidth = 8 * signScale;
+
+      const signX = segment.signSide === 'left' ? x1 - w1 - signWidth * 1.5 : x1 + w1 + signWidth * 0.5;
+      const signY = y1 - signHeight;
+
+      ctx.fillStyle = '#888888';
+      ctx.fillRect(signX + signWidth / 2 - poleWidth / 2, signY, poleWidth, signHeight);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(signX, signY, signWidth, signHeight * 0.7);
+
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 3 * signScale;
+      ctx.strokeRect(signX, signY, signWidth, signHeight * 0.7);
+
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(signX + signWidth / 2, signY + (signHeight * 0.7) / 2, signWidth * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (segment.type === 'tunnel') {
+      const wallHeight1 = scale1 * 800;
+      const wallHeight2 = scale2 * 800;
+
+      ctx.fillStyle = isEven ? '#222222' : '#111111';
+
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1, y1);
+      ctx.lineTo(x1 - w1, y1 - wallHeight1);
+      ctx.lineTo(x2 - w2, y2 - wallHeight2);
+      ctx.lineTo(x2 - w2, y2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x1 + w1, y1);
+      ctx.lineTo(x1 + w1, y1 - wallHeight1);
+      ctx.lineTo(x2 + w2, y2 - wallHeight2);
+      ctx.lineTo(x2 + w2, y2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath();
+      ctx.moveTo(x1 - w1, y1 - wallHeight1);
+      ctx.lineTo(x1 + w1, y1 - wallHeight1);
+      ctx.lineTo(x2 + w2, y2 - wallHeight2);
+      ctx.lineTo(x2 - w2, y2 - wallHeight2);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
-  const carWidth = 260;
-  const carHeight = 110;
-
-  const carX = canvas.width / 2 + playerX * (canvas.width * 0.45) - (carWidth / 2);
-  const carY = canvas.height - carHeight - 10;
-
-  ctx.drawImage(carSprite, carX, carY, carWidth, carHeight);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 20px Arial';
-  ctx.fillText(`Velocidade: ${Math.floor(speed / 100)} MPH`, 20, 40);
+  drawPlayer();
 }
 
-let lastTime = performance.now();
-function gameLoop(now) {
-  const dt = (now - lastTime) / 1000;
-  lastTime = now;
+let lastTime = 0;
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
 
-  update(dt);
+  update(Math.min(dt, 0.1));
   draw();
+
   requestAnimationFrame(gameLoop);
 }
 
-carSprite.onload = () => {
-  requestAnimationFrame(gameLoop);
-};
+requestAnimationFrame(gameLoop);
