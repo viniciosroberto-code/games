@@ -28,23 +28,23 @@ class CustomHUD {
     return 6;
   }
 
-  // Renderiza o Minimapa do Circuito
-  renderMinimap(segments, currentSegmentIndex) {
+  // Desenha o minimapa 100% sincronizado com os segmentos atuais
+  renderMinimap(segments) {
     const ctx = this.ctx;
     const mapX = 30;
-    const mapY = this.canvas.height - 220;
-    const mapWidth = 140;
-    const mapHeight = 140;
+    const mapY = this.canvas.height - 180;
+    const mapWidth = 130;
+    const mapHeight = 130;
 
     ctx.save();
     // Fundo do Mapa
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.strokeStyle = '#555555';
     ctx.lineWidth = 2;
     ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
     ctx.strokeRect(mapX, mapY, mapWidth, mapHeight);
 
-    // Desenhar Traçado da Pista à Frente
+    // Desenha o desenho exato das curvas à frente
     ctx.beginPath();
     ctx.strokeStyle = '#00ffff';
     ctx.lineWidth = 3;
@@ -54,21 +54,23 @@ class CustomHUD {
     ctx.moveTo(posX, posY);
 
     const step = 2;
-    const maxLookAhead = 120; // Quantos segmentos desenhar no mapa
+    const maxSegments = Math.min(100, segments.length);
 
-    for (let i = 0; i < maxLookAhead; i += step) {
-      const segIndex = (currentSegmentIndex + i) % segments.length;
-      const seg = segments[segIndex];
+    for (let i = 0; i < maxSegments; i += step) {
+      const seg = segments[i];
       if (!seg) break;
 
-      posX -= seg.curve * 1.8; // Deslocamento lateral da curva
-      posY -= (mapHeight / maxLookAhead) * step; // Avanço para cima
+      posX -= seg.curve * 1.5; // Curvatura real da pista
+      posY -= (mapHeight / maxSegments) * step;
+
+      // Mantém a linha dentro da caixa do mapa
+      posX = Math.max(mapX + 5, Math.min(mapX + mapWidth - 5, posX));
 
       ctx.lineTo(posX, posY);
     }
     ctx.stroke();
 
-    // Ponto representando o Jogador
+    // Ponto do Jogador
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
     ctx.arc(mapX + mapWidth / 2, mapY + mapHeight - 10, 4, 0, Math.PI * 2);
@@ -77,7 +79,51 @@ class CustomHUD {
     ctx.restore();
   }
 
-  render(speed, maxSpeed, dt = 0.016, segments = [], playerX = 0, currentSegmentIndex = 0) {
+  // Desenha o aviso de curva gigante no meio da tela
+  renderCenterWarning(segments) {
+    // Procura por curvas fortes nos próximos 40 segmentos à frente
+    let upcomingCurve = 0;
+    for (let i = 5; i < 45 && i < segments.length; i++) {
+      if (Math.abs(segments[i].curve) > 1.2) {
+        upcomingCurve = segments[i].curve;
+        break;
+      }
+    }
+
+    if (upcomingCurve === 0) return;
+
+    // Efeito de piscar o aviso
+    if (Math.floor(this.time * 6) % 2 === 0) return;
+
+    const ctx = this.ctx;
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height * 0.25;
+
+    ctx.save();
+
+    // Placa Amarela de Aviso
+    const boxSize = 70;
+    ctx.translate(centerX, centerY);
+    ctx.rotate(Math.PI / 4); // Forma de losango
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize);
+    ctx.restore();
+
+    // Seta Preta de Curva
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 45px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(upcomingCurve > 0 ? '➔' : '⬅', 0, 0);
+    ctx.restore();
+  }
+
+  render(speed, maxSpeed, dt = 0.016, segments = []) {
     this.time += dt;
     const ctx = this.ctx;
     const width = this.canvas.width;
@@ -177,9 +223,9 @@ class CustomHUD {
 
     ctx.restore();
 
-    // Renderiza o mapa se houver segmentos
     if (segments.length > 0) {
-      this.renderMinimap(segments, currentSegmentIndex);
+      this.renderMinimap(segments);
+      this.renderCenterWarning(segments);
     }
   }
 }
