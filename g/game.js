@@ -7,6 +7,22 @@ menuBG.src = "Gemini_Generated_Image_ze3ousze3ousze3o.jpg";
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function requestFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+window.addEventListener('click', requestFullscreen, { once: true });
+
+const hud = new HUD(canvas, ctx);
+
 const ROAD_WIDTH = 1200;
 const SEGMENT_LENGTH = 200;
 const CAM_DEPTH = 0.5;
@@ -301,6 +317,7 @@ function draw() {
   }
 
   drawPlayer();
+  hud.render(speed, maxSpeed);
 }
 
 let lastTime = 0;
