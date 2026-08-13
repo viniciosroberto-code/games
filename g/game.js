@@ -517,7 +517,7 @@ function draw(dt) {
   if (!hud) {
     hud = new CustomHUD(canvas, ctx);
   }
-  hud.render(speed, maxSpeed, dt);
+  hud.render(speed, maxSpeed, dt, segments, playerX);
 }
 
 let lastTime = 0;
