@@ -2,7 +2,7 @@ const carSprite = new Image();
 carSprite.src = "skyli.png";
 
 const menuBG = new Image();
-menuBG.src = "Gemini_Generated_Image_ze3ousze3ousze3o.jpg";
+menuBG.src = "MENU.png";
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
