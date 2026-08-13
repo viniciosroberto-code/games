@@ -1,5 +1,5 @@
 const carSprite = new Image();
-carSprite.src = '5a7be9109ccb7d3-removebg-preview.png';
+carSprite.src = "skyli.png";
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
