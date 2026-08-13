@@ -56,9 +56,12 @@ function pollGamepad() {
   for (let i = 0; i < gamepads.length; i++) {
     const gp = gamepads[i];
     if (gp) {
-      keys['ArrowUp'] = gp.buttons[0].pressed || gp.buttons[7].pressed || gp.axes[1] < -0.5;
-      keys['ArrowDown'] = gp.buttons[1].pressed || gp.buttons[6].pressed || gp.axes[1] > 0.5;
+      const upPressed = gp.buttons[0].pressed || gp.buttons[7].pressed || gp.axes[1] < -0.5;
+      const downPressed = gp.buttons[1].pressed || gp.buttons[6].pressed || gp.axes[1] > 0.5;
       
+      if (upPressed) keys['ArrowUp'] = true;
+      if (downPressed) keys['ArrowDown'] = true;
+
       let steer = gp.axes[0];
       if (Math.abs(steer) > 0.1) {
         if (steer < 0) {
@@ -69,8 +72,8 @@ function pollGamepad() {
           keys['ArrowRight'] = true;
         }
       } else {
-        keys['ArrowLeft'] = gp.buttons[14].pressed;
-        keys['ArrowRight'] = gp.buttons[15].pressed;
+        if (gp.buttons[14].pressed) keys['ArrowLeft'] = true;
+        if (gp.buttons[15].pressed) keys['ArrowRight'] = true;
       }
       break;
     }
@@ -272,6 +275,13 @@ function gameLoop(timestamp) {
   if (!lastTime) lastTime = timestamp;
   const dt = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
+
+  // Limpa o estado das setas do teclado a cada frame antes de ler o controle,
+  // permitindo que o teclado funcione perfeitamente junto com o gamepad.
+  if (!keys['ArrowUp']) keys['ArrowUp'] = false;
+  if (!keys['ArrowDown']) keys['ArrowDown'] = false;
+  if (!keys['ArrowLeft']) keys['ArrowLeft'] = false;
+  if (!keys['ArrowRight']) keys['ArrowRight'] = false;
 
   update(Math.min(dt, 0.1));
   draw();
