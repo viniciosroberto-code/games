@@ -106,11 +106,11 @@ function draw() {
     }
   }
 
-  const carWidth = 100;
-const carHeight = 50;
+  const carWidth = 180;
+const carHeight = 70;
 
 const carX = canvas.width / 2 + playerX * (canvas.width / 3) - (carWidth / 2);
-const carY = canvas.height - carHeight - 20;
+const carY = canvas.height - carHeight - 15;
 
 ctx.drawImage(carSprite, carX, carY, carWidth, carHeight);
 
