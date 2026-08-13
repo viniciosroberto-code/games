@@ -130,4 +130,6 @@ function gameLoop(now) {
   requestAnimationFrame(gameLoop);
 }
 
-requestAnimationFrame(gameLoop);
+carSprite.onload = () => {
+  requestAnimationFrame(gameLoop);
+};
