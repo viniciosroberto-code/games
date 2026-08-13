@@ -101,14 +101,14 @@ class CustomHUD {
     ctx.strokeRect(-boxSize / 2, -boxSize / 2, boxSize, boxSize);
     ctx.restore();
 
-    // Seta corrigida: 'curve > 0' é ESQUERDA e 'curve < 0' é DIREITA
+    // INVERTIDO: Agora se a curva for positiva indica DIREITA e negativa ESQUERDA
     ctx.save();
     ctx.translate(centerX, centerY);
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 45px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(upcomingCurve > 0 ? '⬅' : '➔', 0, 0);
+    ctx.fillText(upcomingCurve > 0 ? '➔' : '⬅', 0, 0);
     ctx.restore();
   }
 
