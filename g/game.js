@@ -6,6 +6,7 @@ menuBG.src = "Gemini_Generated_Image_ze3ousze3ousze3o.jpg";
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -14,12 +15,23 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-function requestFullscreen() {
+function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
+    document.documentElement.requestFullscreen().then(() => {
+      resizeCanvas();
+    }).catch(err => {
+      console.log(`Erro ao ativar Tela Cheia: ${err.message}`);
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
   }
 }
-window.addEventListener('click', requestFullscreen, { once: true });
+
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener('click', toggleFullscreen);
+}
 
 const hud = new HUD(canvas, ctx);
 
@@ -76,6 +88,7 @@ window.addEventListener('keydown', (e) => {
 
   if (gameState === 'menu' && (e.key === 'Enter' || e.key === ' ')) {
     gameState = 'playing';
+    toggleFullscreen();
   }
 });
 
@@ -95,6 +108,7 @@ function pollGamepad() {
 
       if (gameState === 'menu' && (btn(0) || btn(9) || btn(7))) {
         gameState = 'playing';
+        toggleFullscreen();
       }
 
       const axisY = gp.axes[1] || 0;
