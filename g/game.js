@@ -47,13 +47,13 @@ let totalSegmentsGenerated = 0;
 let pendingSegments = [];
 
 function generateNextBlock() {
-  const enterLength = 30;
-  const leaveLength = 30;
-  const holdLength = Math.floor(Math.random() * 60) + 20;
+  const enterLength = 25;
+  const leaveLength = 25;
+  const holdLength = Math.floor(Math.random() * 50) + 20;
   
-  const isStraight = Math.random() < 0.35;
-  const targetCurve = isStraight ? 0 : (Math.random() * 6 - 3);
-  const isTunnel = Math.random() < 0.15;
+  const isStraight = Math.random() < 0.3;
+  const targetCurve = isStraight ? 0 : (Math.random() * 7 - 3.5);
+  const isTunnel = Math.random() < 0.12;
   const type = isTunnel ? 'tunnel' : 'normal';
 
   const total = enterLength + holdLength + leaveLength;
@@ -74,11 +74,11 @@ function generateNextBlock() {
 
     const globalIndex = totalSegmentsGenerated++;
     
-    // Define se deve colocar placa de curva
-    const isEnteringCurve = (i === Math.floor(enterLength / 2)) && Math.abs(targetCurve) > 0.8;
+    // Gera placas na beira da estrada antes do início da curva
+    const isEnteringCurve = (i === Math.floor(enterLength / 3)) && Math.abs(targetCurve) > 1.0;
     const hasSign = isEnteringCurve && type !== 'tunnel';
     const signDirection = targetCurve > 0 ? 'right' : 'left';
-    const signSide = targetCurve > 0 ? 'left' : 'right'; // Coloca a placa do lado oposto à curva
+    const signSide = targetCurve > 0 ? 'left' : 'right'; 
 
     pendingSegments.push({
       index: globalIndex,
@@ -121,7 +121,6 @@ let decel = -2500;
 let playerX = 0;
 let position = 0;
 let bgOffset = 0;
-let currentSegmentIndex = 0;
 
 let gameState = 'menu';
 
@@ -202,7 +201,6 @@ function update(dt) {
 
   while (position >= SEGMENT_LENGTH) {
     position -= SEGMENT_LENGTH;
-    currentSegmentIndex++;
     segments.shift();
     segments.push(getNextSegment());
   }
@@ -266,21 +264,19 @@ function drawMenu() {
   }
 }
 
-// Desenha as placas de aviso de curva nas margens da pista
+// Placas na borda da pista
 function drawCurveSign(x, y, scale, direction) {
-  const width = 70 * scale;
-  const height = 70 * scale;
-  const poleWidth = 6 * scale;
-  const poleHeight = 60 * scale;
+  const width = 80 * scale;
+  const height = 80 * scale;
+  const poleWidth = 8 * scale;
+  const poleHeight = 70 * scale;
 
-  // Poste da Placa
   ctx.fillStyle = '#777777';
   ctx.fillRect(x - poleWidth / 2, y, poleWidth, poleHeight);
 
-  // Placa Amarela de Sinalização
   ctx.save();
   ctx.translate(x, y - height / 2);
-  ctx.rotate(Math.PI / 4); // Rotaciona para formar um losango
+  ctx.rotate(Math.PI / 4);
   ctx.fillStyle = '#ffcc00';
   ctx.fillRect(-width / 2, -height / 2, width, height);
   ctx.strokeStyle = '#000000';
@@ -288,11 +284,10 @@ function drawCurveSign(x, y, scale, direction) {
   ctx.strokeRect(-width / 2, -height / 2, width, height);
   ctx.restore();
 
-  // Seta Indicadora dentro da Placa
   ctx.save();
   ctx.translate(x, y - height / 2);
   ctx.fillStyle = '#000000';
-  ctx.font = `bold ${Math.floor(45 * scale)}px sans-serif`;
+  ctx.font = `bold ${Math.floor(50 * scale)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(direction === 'right' ? '➔' : '⬅', 0, 0);
@@ -341,11 +336,9 @@ function draw(dt) {
     const roadColor = isEven ? '#555555' : '#444444';
     const grassColor = isEven ? '#225522' : '#1e4b1e';
 
-    // Grama
     ctx.fillStyle = grassColor;
     ctx.fillRect(0, y2, canvas.width, y1 - y2);
 
-    // Pista
     ctx.fillStyle = roadColor;
     ctx.beginPath();
     ctx.moveTo(x1 - w1, y1);
@@ -355,7 +348,6 @@ function draw(dt) {
     ctx.closePath();
     ctx.fill();
 
-    // Faixa central da pista
     if (isEven && segment.type !== 'tunnel') {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -367,13 +359,11 @@ function draw(dt) {
       ctx.fill();
     }
 
-    // Renderizar Placa de Curva
     if (segment.hasSign && segment.type !== 'tunnel') {
-      const signX = segment.signSide === 'left' ? x1 - w1 - 80 * scale1 : x1 + w1 + 80 * scale1;
+      const signX = segment.signSide === 'left' ? x1 - w1 - 90 * scale1 : x1 + w1 + 90 * scale1;
       drawCurveSign(signX, y1, scale1, segment.signDirection);
     }
 
-    // Túneis
     if (segment.type === 'tunnel') {
       const wallHeight1 = scale1 * 800;
       const wallHeight2 = scale2 * 800;
@@ -392,7 +382,7 @@ function draw(dt) {
       ctx.moveTo(x1 + w1, y1);
       ctx.lineTo(x1 + w1, y1 - wallHeight1);
       ctx.lineTo(x2 + w2, y2 - wallHeight2);
-      ctx.lineTo(x2 + w2, y2);
+      ctx.lineTo(x2 - w2, y2);
       ctx.closePath();
       ctx.fill();
 
@@ -409,8 +399,7 @@ function draw(dt) {
 
   drawPlayer(bottomRoadWidth);
 
-  // Renderiza o HUD e passa os parâmetros adicionais do minimapa
-  hud.render(speed, maxSpeed, dt, segments, playerX, currentSegmentIndex);
+  hud.render(speed, maxSpeed, dt, segments);
 }
 
 let lastTime = 0;
