@@ -71,22 +71,11 @@ function generateNextBlock() {
     }
 
     const globalIndex = totalSegmentsGenerated++;
-    
-    // Placas geradas logo antes do início da curva
-    const isEnteringCurve = (i === Math.floor(enterLength / 3)) && Math.abs(targetCurve) > 1.0;
-    const hasSign = isEnteringCurve && type !== 'tunnel';
-    
-    // Direção corrigida: targetCurve > 0 é ESQUERDA, targetCurve < 0 é DIREITA
-    const signDirection = targetCurve > 0 ? 'left' : 'right';
-    const signSide = targetCurve > 0 ? 'right' : 'left'; // Placa do lado oposto para melhor visualização
 
     pendingSegments.push({
       index: globalIndex,
       curve: curve,
-      type: type,
-      hasSign: hasSign,
-      signSide: signSide,
-      signDirection: signDirection
+      type: type
     });
   }
 }
@@ -104,10 +93,7 @@ for (let i = 0; i < VISIBLE_SEGMENTS; i++) {
     segments.push({
       index: globalIndex,
       curve: 0,
-      type: 'normal',
-      hasSign: false,
-      signSide: 'left',
-      signDirection: 'left'
+      type: 'normal'
     });
   } else {
     segments.push(getNextSegment());
@@ -264,36 +250,6 @@ function drawMenu() {
   }
 }
 
-function drawCurveSign(x, y, scale, direction) {
-  const width = 80 * scale;
-  const height = 80 * scale;
-  const poleWidth = 8 * scale;
-  const poleHeight = 70 * scale;
-
-  ctx.fillStyle = '#777777';
-  ctx.fillRect(x - poleWidth / 2, y, poleWidth, poleHeight);
-
-  ctx.save();
-  ctx.translate(x, y - height / 2);
-  ctx.rotate(Math.PI / 4);
-  ctx.fillStyle = '#ffcc00';
-  ctx.fillRect(-width / 2, -height / 2, width, height);
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 4 * scale;
-  ctx.strokeRect(-width / 2, -height / 2, width, height);
-  ctx.restore();
-
-  // Seta da placa na borda da pista
-  ctx.save();
-  ctx.translate(x, y - height / 2);
-  ctx.fillStyle = '#000000';
-  ctx.font = `bold ${Math.floor(50 * scale)}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(direction === 'left' ? '⬅' : '➔', 0, 0);
-  ctx.restore();
-}
-
 function draw(dt) {
   if (gameState === 'menu') {
     drawMenu();
@@ -359,11 +315,6 @@ function draw(dt) {
       ctx.fill();
     }
 
-    if (segment.hasSign && segment.type !== 'tunnel') {
-      const signX = segment.signSide === 'left' ? x1 - w1 - 90 * scale1 : x1 + w1 + 90 * scale1;
-      drawCurveSign(signX, y1, scale1, segment.signDirection);
-    }
-
     if (segment.type === 'tunnel') {
       const wallHeight1 = scale1 * 800;
       const wallHeight2 = scale2 * 800;
@@ -382,7 +333,7 @@ function draw(dt) {
       ctx.moveTo(x1 + w1, y1);
       ctx.lineTo(x1 + w1, y1 - wallHeight1);
       ctx.lineTo(x2 + w2, y2 - wallHeight2);
-      ctx.lineTo(x2 - w2, y2);
+      ctx.lineTo(x2 + w2, y2);
       ctx.closePath();
       ctx.fill();
 
